@@ -1,5 +1,6 @@
 package com.udacity.stockhawk.ui;
 
+import android.content.ContentResolver;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -60,29 +61,35 @@ public class StockDetailActivity extends AppCompatActivity implements LoaderMana
         this.mSymbol = savedInstanceState.getString("symbol");
         getSupportLoaderManager().initLoader(CURSOR_LOADER_ID, null, this);
         getSupportLoaderManager().initLoader(CURSOR_LOADER_ID_FOR_LINE_CHART, null, this);
-
     }
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 
         if (id == CURSOR_LOADER_ID) {
-            return new CursorLoader(
-                    this, Contract.Quote.URI,
+            /*resolver.query(Contract.Quote.URI,
+                    null,
+                    Contract.Quote.COLUMN_SYMBOL + " = \"" + mSymbol + "\"",
+                    Contract.Quote.QUOTE_COLUMNS, null);*/
+            return new CursorLoader(StockDetailActivity.this,
+                    Contract.Quote.URI,
                     Contract.Quote.QUOTE_COLUMNS,
                     Contract.Quote.COLUMN_SYMBOL + " = \"" + mSymbol + "\"",
                     null, null);
 
-
         } else if (id == CURSOR_LOADER_ID_FOR_LINE_CHART) {
-            String sortOrder = Contract.Quote._ID + " ASC LIMIT 5";
-            return new CursorLoader(this,
+
+            String sortOrder = Contract.Quote._ID + " ASC";
+
+            return new CursorLoader(StockDetailActivity.this,
                     Contract.Quote.URI,
                     Contract.Quote.QUOTE_COLUMNS,
-                    null, null, null);
-        }
+                    null,
+                    null, sortOrder);
 
-        return null;
+        } else {
+            throw new IllegalStateException();
+        }
     }
 
     @Override
@@ -109,8 +116,9 @@ public class StockDetailActivity extends AppCompatActivity implements LoaderMana
             String percentage = percentageFormat.format(percentageChange / 100);
             mChange.setText(percentage);
 
-        } else if (loader.getId() == CURSOR_LOADER_ID_FOR_LINE_CHART && data != null &&
-                data.moveToFirst()) {
+        } else if (loader.getId() == CURSOR_LOADER_ID_FOR_LINE_CHART && data != null) {
+            data.moveToFirst();
+            Timber.d("PRICES %s", data);
             updateChart(data);
         }
     }
@@ -129,10 +137,15 @@ public class StockDetailActivity extends AppCompatActivity implements LoaderMana
         do {
             counter++;
 
+            String symbol = data.getString(data.getColumnIndex(Contract.Quote.COLUMN_SYMBOL));
+
+            Timber.d("CHART_SYMBOLS %s", symbol);
+
             String date = data.getString(data.getColumnIndex(
                     Contract.Quote.COLUMN_DATE));
+
             String bidPrice = data.getString(data.getColumnIndex(
-                    Contract.Quote.COLUMN_ABSOLUTE_CHANGE));
+                    Contract.Quote.COLUMN_PRICE));
 
             // We have to show chart in right order.
             int x = data.getCount() - 1 - counter;

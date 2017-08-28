@@ -10,34 +10,24 @@ import android.widget.RemoteViews;
 import com.udacity.stockhawk.sync.QuoteIntentService;
 import com.udacity.stockhawk.sync.QuoteJobService;
 import com.udacity.stockhawk.sync.QuoteSyncJob;
+import com.udacity.stockhawk.sync.StockWidgetService;
 import com.udacity.stockhawk.ui.MainActivity;
 
 /**
  * Implementation of App Widget functionality.
+ * Created By : Rahyan Ramadhani on 28.08.2017
  */
 public class AppWidget extends AppWidgetProvider {
 
-    static void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
+    void updateAppWidget(Context context, AppWidgetManager appWidgetManager,
                                 int appWidgetId) {
 
-        CharSequence widgetText = context.getString(R.string.appwidget_text);
-
-        Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
-
-        // Construct the RemoteViews object
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.app_widget);
-        //views.setTextViewText(R.id.appwidget_text, widgetText);
-
-        views.setOnClickPendingIntent(R.id.button, pendingIntent);
-
-        Intent xxx = new Intent(context, QuoteSyncJob.class);
-        xxx.setAction(QuoteSyncJob.ACTION_DATA_UPDATED);
-
-        PendingIntent bbb = PendingIntent.getService(context, 0, xxx, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        // Instruct the widget manager to update the widget
-        appWidgetManager.updateAppWidget(appWidgetId, views);
+        RemoteViews rv = new RemoteViews(context.getPackageName(),
+                R.layout.app_widget);
+        setList(rv, context, appWidgetId);
+        appWidgetManager.updateAppWidget(appWidgetId, rv);
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId,
+                R.id.stock_list);
     }
 
     @Override
@@ -56,6 +46,12 @@ public class AppWidget extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         // Enter relevant functionality for when the last widget is disabled
+    }
+
+    void setList(RemoteViews rv, Context context, int appWidgetId) {
+        Intent adapter = new Intent(context, StockWidgetService.class);
+        adapter.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId);
+        rv.setRemoteAdapter(R.id.stock_list, adapter);
     }
 }
 

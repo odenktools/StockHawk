@@ -164,7 +164,7 @@ public final class QuoteSyncJob {
     }
 
     public static synchronized void initialize(final Context context) {
-        //schedulePeriodic(context);
+        schedulePeriodic(context);
         syncImmediately(context);
     }
 
