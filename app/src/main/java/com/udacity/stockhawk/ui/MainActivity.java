@@ -1,5 +1,7 @@
 package com.udacity.stockhawk.ui;
 
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -20,6 +22,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.udacity.stockhawk.AppWidget;
 import com.udacity.stockhawk.R;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
@@ -68,7 +71,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         swipeRefreshLayout.setRefreshing(true);
         onRefresh();
 
-
         QuoteSyncJob.initialize(this);
         getSupportLoaderManager().initLoader(STOCK_LOADER, null, this);
 
@@ -100,6 +102,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onRefresh() {
 
         QuoteSyncJob.syncImmediately(this);
+
+        Intent intent = new Intent(this, AppWidget.class);
+        intent.setAction("android.appwidget.action.APPWIDGET_UPDATE");
+        int ids[] = AppWidgetManager.getInstance(this).getAppWidgetIds(new ComponentName(this, AppWidget.class));
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS,ids);
+        sendBroadcast(intent);
 
         if (!networkUp() && adapter.getItemCount() == 0) {
             swipeRefreshLayout.setRefreshing(false);
@@ -133,6 +141,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             PrefUtils.addStock(this, symbol);
             QuoteSyncJob.syncImmediately(this);
+
+            Intent intent = new Intent(this, AppWidget.class);
+            intent.setAction("android.appwidget.action.APPWIDGET_UPDATE");
+            int ids[] = AppWidgetManager.getInstance(this).getAppWidgetIds(new ComponentName(this, AppWidget.class));
+            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS,ids);
+            sendBroadcast(intent);
         }
     }
 

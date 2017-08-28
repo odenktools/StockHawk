@@ -182,6 +182,7 @@ public final class QuoteSyncJob {
                     .setBackoffCriteria(INITIAL_BACKOFF, JobInfo.BACKOFF_POLICY_EXPONENTIAL);
             JobScheduler scheduler = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
             scheduler.schedule(builder.build());
+            Timber.d("syncImmediately");
         }
     }
 

@@ -16,6 +16,8 @@ public class StockWidgetService extends RemoteViewsService {
 
     @Override
     public RemoteViewsService.RemoteViewsFactory onGetViewFactory(Intent intent) {
+        //QuoteIntentService.startActionWaterPlants(this);
+        QuoteSyncJob.syncImmediately(this);
         return new StockWidgetFactory(getApplicationContext(), intent);
     }
 }
