@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
+import com.udacity.stockhawk.StockHawkApp;
 import com.udacity.stockhawk.data.Contract;
 import com.udacity.stockhawk.data.PrefUtils;
 
@@ -42,22 +43,38 @@ public final class QuoteSyncJob {
     private static final String QUANDL_ROOT = "https://www.quandl.com/api/v3/datasets/WIKI/";
 
     private static final OkHttpClient client = new OkHttpClient();
-    private static final LocalDate startDate = LocalDate.now().minus(YEARS_OF_HISTORY, ChronoUnit.YEARS);
+    //private static final LocalDate startDate = LocalDate.now().minus(YEARS_OF_HISTORY, ChronoUnit.YEARS);
     private static final LocalDate endDate = LocalDate.now();
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static StringBuilder historyBuilder = new StringBuilder();
-
 
     private QuoteSyncJob() {
 
     }
 
     public static HttpUrl createQuery(String symbol) {
+        HttpUrl.Builder httpUrl = HttpUrl.parse(QUANDL_ROOT + symbol + ".json").newBuilder();
 
-        HttpUrl.Builder httpUrl = HttpUrl.parse(QUANDL_ROOT + symbol + ".json?api_key=zz_V7WUTy4-LM6AMG_xs").newBuilder();
-        httpUrl.addQueryParameter("column_index", "4")  //closing price
-                .addQueryParameter("start_date", formatter.format(startDate))
-                .addQueryParameter("end_date", formatter.format(endDate));
+        if(!StockHawkApp.APIKEY.equals("")){
+            httpUrl.addQueryParameter("api_key", StockHawkApp.APIKEY);
+        }
+
+        //closing price
+        httpUrl.addQueryParameter("column_index", "4");
+
+        LocalDate startDate = endDate.minusDays(7);
+
+        String minus7 = formatter.format(startDate);
+
+        Timber.d("DATE_MINUS7 %s", minus7);
+
+        //-----
+        //filter start date
+        httpUrl.addQueryParameter("start_date", formatter.format(startDate));
+        //filter end date
+        httpUrl.addQueryParameter("end_date", formatter.format(endDate));
+        //-----
+
         return httpUrl.build();
     }
 
@@ -67,10 +84,11 @@ public final class QuoteSyncJob {
 
         JSONArray historicData = jsonObject.getJSONArray("data");
 
-        double price = historicData.getJSONArray(0).getDouble(1);
-        double change = price - historicData.getJSONArray(1).getDouble(1);
-        double percentChange = 100 * ((price - historicData.getJSONArray(1).getDouble(1)) / historicData.getJSONArray(1).getDouble(1));
         String date = historicData.getJSONArray(0).getString(0);
+        double price = historicData.getJSONArray(0).getDouble(1);
+        double unknown = historicData.getJSONArray(1).getDouble(1);
+        double change = price - unknown;
+        double percentChange = 100 * ((price - unknown) / unknown);
 
         historyBuilder = new StringBuilder();
 
@@ -97,14 +115,11 @@ public final class QuoteSyncJob {
 
     static void getQuotes(final Context context) {
 
-        Timber.d("Running sync job");
+        Timber.d("SYNC_JOBS %s", context.getClass().getSimpleName());
 
         historyBuilder = new StringBuilder();
-
         try {
-
             Set<String> stockPref = PrefUtils.getStocks(context);
-
             for (String stock : stockPref) {
                 Request request = new Request.Builder()
                         .url(createQuery(stock)).build();
@@ -112,7 +127,7 @@ public final class QuoteSyncJob {
                 client.newCall(request).enqueue(new Callback() {
                     @Override
                     public void onFailure(Call call, IOException e) {
-                        Timber.e("OKHTTP", e.getMessage());
+                        Timber.e("SYNC_JOBS_FAILURE %s", e.getMessage());
                     }
 
                     @Override
@@ -123,6 +138,7 @@ public final class QuoteSyncJob {
                             ContentValues quotes = processStock(jsonObject.getJSONObject("dataset"));
                             context.getContentResolver().insert(Contract.Quote.URI, quotes);
                         } catch (JSONException ex) {
+                            Timber.d("SYNC_JOBS_ERROR %s", ex.getMessage());
                         }
                     }
                 });
@@ -136,7 +152,7 @@ public final class QuoteSyncJob {
         }
     }
 
-    private static void schedulePeriodic(Context context) {
+    public static void schedulePeriodic(Context context) {
         Timber.d("Scheduling a periodic task");
         JobInfo.Builder builder = new JobInfo.Builder(PERIODIC_ID, new ComponentName(context, QuoteJobService.class));
         builder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
@@ -147,9 +163,8 @@ public final class QuoteSyncJob {
         scheduler.schedule(builder.build());
     }
 
-
     public static synchronized void initialize(final Context context) {
-        schedulePeriodic(context);
+        //schedulePeriodic(context);
         syncImmediately(context);
     }
 

@@ -13,8 +13,11 @@ import android.widget.TextView;
 import com.udacity.stockhawk.R;
 import com.udacity.stockhawk.data.Contract;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -64,7 +67,8 @@ public class StockDetailActivity extends AppCompatActivity implements LoaderMana
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
 
         if (id == CURSOR_LOADER_ID) {
-            return new CursorLoader(this, Contract.Quote.URI,
+            return new CursorLoader(
+                    this, Contract.Quote.URI,
                     Contract.Quote.QUOTE_COLUMNS,
                     Contract.Quote.COLUMN_SYMBOL + " = \"" + mSymbol + "\"",
                     null, null);
@@ -72,12 +76,10 @@ public class StockDetailActivity extends AppCompatActivity implements LoaderMana
 
         } else if (id == CURSOR_LOADER_ID_FOR_LINE_CHART) {
             String sortOrder = Contract.Quote._ID + " ASC LIMIT 5";
-
-
             return new CursorLoader(this,
                     Contract.Quote.URI,
                     Contract.Quote.QUOTE_COLUMNS,
-                    null, null, Contract.Quote.COLUMN_SYMBOL);
+                    null, null, null);
         }
 
         return null;
@@ -85,21 +87,27 @@ public class StockDetailActivity extends AppCompatActivity implements LoaderMana
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+
         if (loader.getId() == CURSOR_LOADER_ID && data != null && data.moveToFirst()) {
 
             String symbol = data.getString(data.getColumnIndex(Contract.Quote.COLUMN_SYMBOL));
             mSymbolView.setText(symbol);
 
-            String ebitda = data.getString(data.getColumnIndex(Contract.Quote.COLUMN_PRICE));
-            mEbitdaView.setText(ebitda);
+            float ebitda = data.getFloat(data.getColumnIndex(Contract.Quote.COLUMN_PRICE));
+            float percentageChange = data.getFloat(data.getColumnIndex(Contract.Quote.COLUMN_PERCENTAGE_CHANGE));
 
-            /*String name = data.getString(data.getColumnIndex(QuoteColumns.NAME));
-            mNameView.setText(name);*/
+            DecimalFormat dollarFormat = (DecimalFormat) NumberFormat.getCurrencyInstance(Locale.US);
+            DecimalFormat dollarFormatWithPlus = (DecimalFormat) NumberFormat.getCurrencyInstance(Locale.US);
+            dollarFormatWithPlus.setPositivePrefix("+$");
 
-            //String change = data.getString(data.getColumnIndex(QuoteColumns.CHANGE));
-            String percentChange = data.getString(data.getColumnIndex(Contract.Quote.COLUMN_PERCENTAGE_CHANGE));
-            //String mixedChange = change + " (" + percentChange + ")";
-            mChange.setText(percentChange);
+            DecimalFormat percentageFormat = (DecimalFormat) NumberFormat.getPercentInstance(Locale.getDefault());
+            percentageFormat.setMaximumFractionDigits(2);
+            percentageFormat.setMinimumFractionDigits(2);
+            percentageFormat.setPositivePrefix("+");
+
+            mEbitdaView.setText(dollarFormat.format(ebitda));
+            String percentage = percentageFormat.format(percentageChange / 100);
+            mChange.setText(percentage);
 
         } else if (loader.getId() == CURSOR_LOADER_ID_FOR_LINE_CHART && data != null &&
                 data.moveToFirst()) {
